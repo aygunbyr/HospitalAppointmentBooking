@@ -16,6 +16,10 @@ namespace App.Services
         {
             services.Configure<ApiBehaviorOptions>(options => options.SuppressModelStateInvalidFilter = true);
 
+            services.AddScoped<AppointmentCommandInvoker>();
+            services.AddScoped<DoctorCommandInvoker>();
+            services.AddScoped<PatientCommandInvoker>();
+
             services.AddScoped<IAppointmentService, AppointmentService>();
             services.AddScoped<IDoctorService, DoctorService>();
             services.AddScoped<IPatientService, PatientService>();

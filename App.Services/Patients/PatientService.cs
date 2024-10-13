@@ -3,6 +3,7 @@ using App.Models.Dtos.Patients;
 using App.Models.Models;
 using App.Repositories.Patients;
 using App.Repositories.Shared;
+using App.Services.Patients.Commands;
 using AutoMapper;
 using System.Net;
 using System.Numerics;
@@ -14,18 +15,25 @@ namespace App.Services.Patients
         private readonly IPatientRepository _patientRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly PatientCommandInvoker _invoker;
 
-        public PatientService(IPatientRepository patientRepository, IUnitOfWork unitOfWork, IMapper mapper)
+        public PatientService(
+            IPatientRepository patientRepository,
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            PatientCommandInvoker invoker)
         {
             _patientRepository = patientRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _invoker = invoker;
         }
 
         public async Task<ServiceResult<CreatePatientResponse>> CreateAsync(CreatePatientRequest request)
         {
             Patient patient = _mapper.Map<Patient>(request);
-            await _patientRepository.AddAsync(patient);
+            _invoker.AddCommand(new CreatePatientCommand(patient, _patientRepository));
+            await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
             CreatePatientResponse response = _mapper.Map<CreatePatientResponse>(patient);
             return ServiceResult<CreatePatientResponse>.SuccessAsCreated(response, $"api/patients/{patient.Id}");
@@ -38,7 +46,8 @@ namespace App.Services.Patients
             {
                 return ServiceResult.Fail("Patient not found", HttpStatusCode.NotFound);
             }
-            _patientRepository.Delete(patient!);
+            _invoker.AddCommand(new DeletePatientCommand(patient, _patientRepository));
+            await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
             return ServiceResult.Success(HttpStatusCode.NoContent);
         }
@@ -65,7 +74,8 @@ namespace App.Services.Patients
         {
             Patient patient = _mapper.Map<Patient>(request);
             patient.Id = id;
-            _patientRepository.Update(patient);
+            _invoker.AddCommand(new UpdatePatientCommand(patient, _patientRepository));
+            await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
             return ServiceResult.Success(HttpStatusCode.NoContent);
         }

@@ -4,6 +4,7 @@ using App.Repositories.Appointments;
 using App.Repositories.Doctors;
 using App.Repositories.Patients;
 using App.Repositories.Shared;
+using App.Services.Appointments.Commands;
 using AutoMapper;
 using System.Net;
 
@@ -16,22 +17,29 @@ namespace App.Services.Appointments
         private readonly IPatientRepository _patientRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly AppointmentCommandInvoker _invoker;
         public AppointmentService(
             IAppointmentRepository appointmentRepository,
             IDoctorRepository doctorRepository,
             IPatientRepository patientRepository,
             IUnitOfWork unitOfWork,
-            IMapper mapper)
+            IMapper mapper,
+            AppointmentCommandInvoker invoker)
         {
             _appointmentRepository = appointmentRepository;
             _doctorRepository = doctorRepository;
             _patientRepository = patientRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _invoker = invoker;
         }
 
         public async Task<ServiceResult<CreateAppointmentResponse?>> CreateAsync(CreateAppointmentRequest request)
         {
+            if (request.DoctorId == 0)
+            {
+                return ServiceResult<CreateAppointmentResponse?>.Fail("Doctor does not exist", HttpStatusCode.BadRequest);
+            }
             bool doctorExists = await _doctorRepository.AnyAsync(request.DoctorId);
             if(doctorExists is false)
             {
@@ -48,7 +56,8 @@ namespace App.Services.Appointments
                 return ServiceResult<CreateAppointmentResponse?>.Fail("Doctor cannot have more than 10 appointments.");
             }
             Appointment appointment = _mapper.Map<Appointment>(request);
-            await _appointmentRepository.AddAsync(appointment);
+            _invoker.AddCommand(new CreateAppointmentCommand(appointment, _appointmentRepository));
+            await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
             CreateAppointmentResponse response = _mapper.Map<CreateAppointmentResponse>(appointment);
             return ServiceResult<CreateAppointmentResponse>.SuccessAsCreated(response, $"api/appointments/{appointment.Id}")!;
@@ -61,7 +70,8 @@ namespace App.Services.Appointments
             {
                 return ServiceResult.Fail("Appointment not found", HttpStatusCode.NotFound);
             }
-            _appointmentRepository.Delete(appointment!);
+            _invoker.AddCommand(new DeleteAppointmentCommand(appointment, _appointmentRepository));
+            await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
             return ServiceResult.Success(HttpStatusCode.NoContent);
         }
@@ -88,7 +98,12 @@ namespace App.Services.Appointments
         {
             Appointment appointment = _mapper.Map<Appointment>(request);
             appointment.Id = id;
-            _appointmentRepository.Update(appointment);
+            if(request.DoctorId == 0)
+            {
+                return ServiceResult.Fail("Doctor does not exist", HttpStatusCode.BadRequest);
+            }
+            _invoker.AddCommand(new UpdateAppointmentCommand(appointment, _appointmentRepository));
+            await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
             return ServiceResult.Success(HttpStatusCode.NoContent);
         }

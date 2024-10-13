@@ -2,6 +2,7 @@
 using App.Models.Models;
 using App.Repositories.Doctors;
 using App.Repositories.Shared;
+using App.Services.Doctors.Commands;
 using AutoMapper;
 using System.Net;
 
@@ -12,12 +13,18 @@ namespace App.Services.Doctors
         private readonly IDoctorRepository _doctorRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly DoctorCommandInvoker _invoker;
 
-        public DoctorService(IDoctorRepository doctorRepository, IUnitOfWork unitOfWork, IMapper mapper)
+        public DoctorService(
+            IDoctorRepository doctorRepository,
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            DoctorCommandInvoker invoker)
         {
             _doctorRepository = doctorRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _invoker = invoker;
         }
 
         public async Task<ServiceResult<CreateDoctorResponse?>> CreateAsync(CreateDoctorRequest request)
@@ -28,7 +35,8 @@ namespace App.Services.Doctors
                 return ServiceResult<CreateDoctorResponse?>.Fail($"Branch name is invalid. Must be one of {string.Join(", ", branches)}.", HttpStatusCode.NotFound);
             }
             Doctor doctor = _mapper.Map<Doctor>(request);
-            await _doctorRepository.AddAsync(doctor);
+            _invoker.AddCommand(new CreateDoctorCommand(doctor, _doctorRepository));
+            await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
             CreateDoctorResponse response = _mapper.Map<CreateDoctorResponse>(doctor);
             return ServiceResult<CreateDoctorResponse>.SuccessAsCreated(response, $"api/doctors/{doctor.Id}")!;
@@ -41,7 +49,8 @@ namespace App.Services.Doctors
             {
                 return ServiceResult.Fail("Doctor not found", HttpStatusCode.NotFound);
             }
-            _doctorRepository.Delete(doctor!);
+            _invoker.AddCommand(new DeleteDoctorCommand(doctor, _doctorRepository));
+            await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
             return ServiceResult.Success(HttpStatusCode.NoContent);
         }
@@ -73,7 +82,8 @@ namespace App.Services.Doctors
             }
             Doctor doctor = _mapper.Map<Doctor>(request);
             doctor.Id = id;
-            _doctorRepository.Update(doctor);
+            _invoker.AddCommand(new UpdateDoctorCommand(doctor, _doctorRepository));
+            await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
             return ServiceResult.Success(HttpStatusCode.NoContent);
         }
