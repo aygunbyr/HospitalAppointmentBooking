@@ -53,7 +53,7 @@ namespace App.Services.Appointments
             List<Appointment> appointments = await _appointmentRepository.Where(x => x.DoctorId == request.DoctorId);
             if(appointments.Count >= 10)
             {
-                return ServiceResult<CreateAppointmentResponse?>.Fail("Doctor cannot have more than 10 appointments.");
+                return ServiceResult<CreateAppointmentResponse?>.Fail("Doctor cannot have more than 10 appointments.", HttpStatusCode.BadRequest);
             }
             Appointment appointment = _mapper.Map<Appointment>(request);
             _invoker.AddCommand(new CreateAppointmentCommand(appointment, _appointmentRepository));

@@ -32,7 +32,7 @@ namespace App.Services.Doctors
             string[] branches = Branch.GetAllBranches();
             if (branches.Any(x => x == request.Branch) is false)
             {
-                return ServiceResult<CreateDoctorResponse?>.Fail($"Branch name is invalid. Must be one of {string.Join(", ", branches)}.", HttpStatusCode.NotFound);
+                return ServiceResult<CreateDoctorResponse?>.Fail($"Branch name is invalid. Must be one of {string.Join(", ", branches)}.", HttpStatusCode.BadRequest);
             }
             Doctor doctor = _mapper.Map<Doctor>(request);
             _invoker.AddCommand(new CreateDoctorCommand(doctor, _doctorRepository));
@@ -78,7 +78,7 @@ namespace App.Services.Doctors
             string[] branches = Branch.GetAllBranches();
             if (branches.Any(x => x == request.Branch) is false)
             {
-                return ServiceResult.Fail($"Branch name is invalid. Must be one of {string.Join(", ", branches)}.", HttpStatusCode.NotFound);
+                return ServiceResult.Fail($"Branch name is invalid. Must be one of {string.Join(", ", branches)}.", HttpStatusCode.BadRequest);
             }
             Doctor doctor = _mapper.Map<Doctor>(request);
             doctor.Id = id;
