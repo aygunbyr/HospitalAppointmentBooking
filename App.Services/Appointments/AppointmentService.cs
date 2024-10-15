@@ -96,12 +96,22 @@ namespace App.Services.Appointments
 
         public async Task<ServiceResult> UpdateAsync(Guid id, UpdateAppointmentRequest request)
         {
-            Appointment appointment = _mapper.Map<Appointment>(request);
-            appointment.Id = id;
-            if(request.DoctorId == 0)
+            if (request.DoctorId == 0)
             {
                 return ServiceResult.Fail("Doctor does not exist", HttpStatusCode.BadRequest);
             }
+            bool doctorExists = await _doctorRepository.AnyAsync(request.DoctorId);
+            if (doctorExists is false)
+            {
+                return ServiceResult.Fail("Doctor does not exist", HttpStatusCode.BadRequest);
+            }
+            bool patientExists = await _patientRepository.AnyAsync(request.PatientId);
+            if (patientExists is false)
+            {
+                return ServiceResult.Fail("Patient does not exist", HttpStatusCode.BadRequest);
+            }
+            Appointment appointment = _mapper.Map<Appointment>(request);
+            appointment.Id = id;
             _invoker.AddCommand(new UpdateAppointmentCommand(appointment, _appointmentRepository));
             await _invoker.ExecuteCommandsAsync();
             await _unitOfWork.SaveChangesAsync();
