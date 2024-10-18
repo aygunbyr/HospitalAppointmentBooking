@@ -12,15 +12,15 @@
 
         public AppointmentResponse() { }
 
-        public AppointmentResponse(Guid id, DateTime date, string doctorBranch, string doctorName, string patientName, string patientPhone, string patientCitizenId)
-        {
-            Id = id;
-            Date = date;
-            DoctorBranch = doctorBranch;
-            DoctorName = doctorName;
-            PatientName = patientName;
-            PatientPhone = patientPhone;
-            PatientCitizenId = patientCitizenId;
-        }
+        //public AppointmentResponse(Guid id, DateTime date, string doctorBranch, string doctorName, string patientName, string patientPhone, string patientCitizenId)
+        //{
+        //    Id = id;
+        //    Date = date;
+        //    DoctorBranch = doctorBranch;
+        //    DoctorName = doctorName;
+        //    PatientName = patientName;
+        //    PatientPhone = patientPhone;
+        //    PatientCitizenId = patientCitizenId;
+        //}
     }
 }
